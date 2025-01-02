@@ -14,10 +14,12 @@ struct ContentView: View {
     @Environment(\.scenePhase) var scenePhase
     @Environment(\.accessibilityVoiceOverEnabled) var accessibilityVoiceOverEnabled
     
-    @State private var cards = Array<Card>(repeating: .example, count: 10)
+    @State private var cards = [Card]() //Array<Card>(repeating: .example, count: 10)
     @State private var timeRemaining = 100
     @State private var isActive = true
     ///We have two var for scenePhase here because the environment value tells us whether the app is active or inactive in terms of its visibility, but we’ll also consider the app inactive is the player has gone through their deck of flashcards – it will be active from a scene phase point of view, but we don’t keep the timer ticking.
+    
+    @State private var showingEditScreen = false
     
     let timer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     
@@ -68,6 +70,28 @@ struct ContentView: View {
                 ///if allowHitTesting is false in the parameter, swiftUI will disable all kind of interactive (click, gestures and more). This will disable interactive if timeRemaing is 0
                 .allowsHitTesting(timeRemaining > 0)
             }
+            
+            VStack {
+             
+                HStack {
+                  Spacer()
+                    
+                    Button {
+                        showingEditScreen = true
+                    } label: {
+                        Image(systemName: "plus.circle")
+                            .padding()
+                            .background(.black.opacity(0.7))
+                            .clipShape(.circle)
+                    }
+                }
+                
+                Spacer()
+                
+            }
+            .foregroundStyle(.white)
+            .font(.largeTitle)
+            .padding()
             
             ///we can make those buttons visible when either accessibilityDifferentiateWithoutColor is enabled or when VoiceOver
             if accessibilityDifferentiateWithoutColor || accessibilityVoiceOverEnabled {
@@ -140,6 +164,17 @@ struct ContentView: View {
                 isActive = false
             }
         }
+        ///calls resetCards() when dismissed - This isn’t helpful for times you need to pass back data from the sheet, but here we’re just going to call resetCards() so it’s perfect
+        /*.sheet(isPresented: $showingEditScreen, onDismiss: resetCards) {
+            EditCard()
+        }*/
+        
+        ///When we write EditCards(), we’re relying on syntactic sugar – we’re treating our view struct like a function, because Swift silently treats that as a call to the view’s initializer. So, in practice we’re actually writing EditCards.init(), just in a shorter way.This all matters because rather than creating a closure that calls the EditCards initializer, we can actually pass the EditCards initializer directly to the sheet, like this: (another way to call the sheet)
+        .sheet(isPresented: $showingEditScreen, onDismiss: resetCards, content: EditCard.init)
+        ///That means “when you want to read the content for the sheet, call the EditCards initializer and it will send you back the view to use . Important: This approach only works because EditCards has an initializer that accepts no parameters. If you need to pass in specific values you need to use the closure-based approach instead
+        
+        ///Anyway, as well as calling resetCards() when the sheet is dismissed, we also want to call it when the view first appears
+        .onAppear(perform: resetCards)
     }
     
     ///we can now write a method to handle removing a card, then connect it to that closure in CardView.
@@ -157,9 +192,18 @@ struct ContentView: View {
     }
     
     func resetCards() {
-        cards = Array<Card>(repeating: .example, count: 10)
+        //cards = Array<Card>(repeating: .example, count: 10)
         timeRemaining = 100
         isActive = true
+        loadData()
+    }
+    
+    func loadData() {
+        if let data = UserDefaults.standard.data(forKey: "Cards") {
+            if let decoded = try? JSONDecoder().decode([Card].self, from: data) {
+                cards = decoded
+            }
+        }
     }
     
 }

@@ -7,7 +7,9 @@
 
 import Foundation
 
-struct Card {
+///We’re going to design a new EditCards view to encode and decode a Card array to UserDefaults, but before we do that I’d like you to make the Card struct conform to Codable like this
+
+struct Card: Codable {
     var prompt: String
     var answer: String
     
